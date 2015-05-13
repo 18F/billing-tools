@@ -1,3 +1,5 @@
+// find 'client' tags for EBS instances from the associated EC2 instances
+
 // http://aws.amazon.com/sdk-for-node-js/
 var AWS = require('aws-sdk');
 AWS.config.update({region: 'us-east-1'});
@@ -44,25 +46,25 @@ ec2.describeVolumes(params, function(err, data) {
       var client = findClient(volume);
 
       if (!client) {
-        volume.Attachments.forEach(function(attachment) {
-          var params = {
-            InstanceIds: [
-              attachment.InstanceId
-            ]
-          };
-          ec2.describeInstances(params, function(err, data) {
-            if (err) {
-              console.log(err, err.stack);
+        // assume only a single attachment
+        var attachment = volume.Attachments[0];
+        var params = {
+          InstanceIds: [
+            attachment.InstanceId
+          ]
+        };
+        ec2.describeInstances(params, function(err, data) {
+          if (err) {
+            console.log(err, err.stack);
+          } else {
+            var instance = data.Reservations[0].Instances[0];
+            client = findClient(instance);
+            if (client) {
+              console.log('found for ' + volume.VolumeId);
             } else {
-              var instance = data.Reservations[0].Instances[0];
-              client = findClient(instance);
-              if (client) {
-                console.log('found for ' + volume.VolumeId);
-              } else {
-                console.log('not found for ' + volume.VolumeId);
-              }
+              console.log('not found for ' + volume.VolumeId);
             }
-          });
+          }
         });
       }
     });
