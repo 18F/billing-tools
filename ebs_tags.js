@@ -1,4 +1,4 @@
-// find 'client' tags for EBS instances from the associated EC2 instances
+// find 'client' tags for EBS instances from the attached EC2 instances
 
 // http://aws.amazon.com/sdk-for-node-js/
 var AWS = require('aws-sdk');
@@ -6,7 +6,7 @@ AWS.config.update({region: 'us-east-1'});
 
 var ec2 = new AWS.EC2();
 
-var findClient = function(resource) {
+var findClientTag = function(resource) {
   var tag;
   for (var i = 0; i < resource.Tags.length; i++) {
     tag = resource.Tags[i];
@@ -17,6 +17,24 @@ var findClient = function(resource) {
   }
 
   return undefined;
+};
+
+var getInstance = function(volume, callback) {
+  // assume only a single attachment
+  var attachment = volume.Attachments[0];
+  var params = {
+    InstanceIds: [
+      attachment.InstanceId
+    ]
+  };
+  ec2.describeInstances(params, function(err, data) {
+    if (err) {
+      callback(err);
+    } else {
+      var instance = data.Reservations[0].Instances[0];
+      callback(null, instance);
+    }
+  });
 };
 
 
@@ -43,22 +61,14 @@ ec2.describeVolumes(params, function(err, data) {
   } else {
     // console.dir(data, {depth: null});
     data.Volumes.forEach(function(volume) {
-      var client = findClient(volume);
-
+      var client = findClientTag(volume);
       if (!client) {
         // assume only a single attachment
-        var attachment = volume.Attachments[0];
-        var params = {
-          InstanceIds: [
-            attachment.InstanceId
-          ]
-        };
-        ec2.describeInstances(params, function(err, data) {
+        getInstance(volume, function(err, instance) {
           if (err) {
             console.log(err, err.stack);
           } else {
-            var instance = data.Reservations[0].Instances[0];
-            client = findClient(instance);
+            client = findClientTag(instance);
             if (client) {
               console.log('found for ' + volume.VolumeId);
             } else {
