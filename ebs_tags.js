@@ -70,9 +70,7 @@ ec2.describeVolumes(params, function(err, data) {
           } else {
             client = findClientTag(instance);
             if (client) {
-              console.log('found for ' + volume.VolumeId);
-            } else {
-              console.log('not found for ' + volume.VolumeId);
+              console.log(volume.VolumeId + ' should have client tag ' + client);
             }
           }
         });
