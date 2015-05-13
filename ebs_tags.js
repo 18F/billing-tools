@@ -10,8 +10,7 @@ var findClientTag = function(resource) {
   var tag;
   for (var i = 0; i < resource.Tags.length; i++) {
     tag = resource.Tags[i];
-    // TODO check for 'Client'
-    if (tag.Key === 'client') {
+    if (tag.Key.toLowerCase() === 'client') {
       return tag.Value;
     }
   }
@@ -41,6 +40,7 @@ var getInstance = function(volume, callback) {
 // http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/EC2.html#describeVolumes-property
 var params = {
   Filters: [
+    // this should work but doesn't
     // {
     //   Name: 'tag:client',
     //   Values: [
