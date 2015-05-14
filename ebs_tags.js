@@ -28,6 +28,7 @@ var getUntaggedVolumes = function() {
   var params = {
     Filters: [
       // this should work but doesn't
+      // https://forums.aws.amazon.com/thread.jspa?threadID=180551
       // {
       //   Name: 'tag:client',
       //   Values: [
@@ -74,6 +75,7 @@ var findAssociatedClient = function(volume) {
     }
   });
 };
+
 
 getUntaggedVolumes().then(function(volumes) {
   var promises = volumes.map(findAssociatedClient);
