@@ -2,9 +2,13 @@
 
 // http://aws.amazon.com/sdk-for-node-js/
 var AWS = require('aws-sdk');
-AWS.config.update({region: 'us-east-1'});
+var Promise = require('promise');
 
+AWS.config.update({region: 'us-east-1'});
 var ec2 = new AWS.EC2();
+
+
+var getInstances = Promise.denodeify(ec2.describeInstances).bind(ec2);
 
 var findClientTag = function(resource) {
   var tag;
@@ -18,7 +22,7 @@ var findClientTag = function(resource) {
   return undefined;
 };
 
-var getInstance = function(volume, callback) {
+var getInstance = function(volume) {
   // assume only a single attachment
   var attachment = volume.Attachments[0];
   var params = {
@@ -26,14 +30,13 @@ var getInstance = function(volume, callback) {
       attachment.InstanceId
     ]
   };
-  ec2.describeInstances(params, function(err, data) {
-    if (err) {
-      callback(err);
-    } else {
-      var instance = data.Reservations[0].Instances[0];
-      callback(null, instance);
-    }
+
+  var promise = getInstances(params).then(function(data) {
+    var instance = data.Reservations[0].Instances[0];
+    return instance;
   });
+
+  return promise;
 };
 
 
@@ -62,16 +65,17 @@ ec2.describeVolumes(params, function(err, data) {
     data.Volumes.forEach(function(volume) {
       var client = findClientTag(volume);
       if (!client) {
-        getInstance(volume, function(err, instance) {
-          if (err) {
-            console.log(err, err.stack);
-          } else {
+        getInstance(volume).then(
+          function(instance) {
             client = findClientTag(instance);
             if (client) {
               console.log(volume.VolumeId + ' should have client tag ' + client);
             }
+          },
+          function(err) {
+            console.log(err, err.stack);
           }
-        });
+        );
       }
     });
   }
