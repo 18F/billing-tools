@@ -8,6 +8,7 @@ AWS.config.update({region: 'us-east-1'});
 var ec2 = new AWS.EC2();
 
 
+var getVolumes = Promise.denodeify(ec2.describeVolumes).bind(ec2);
 var getInstances = Promise.denodeify(ec2.describeInstances).bind(ec2);
 
 var findClientTag = function(resource) {
@@ -58,10 +59,8 @@ var params = {
     }
   ]
 };
-ec2.describeVolumes(params, function(err, data) {
-  if (err) {
-    console.log(err, err.stack);
-  } else {
+getVolumes(params).then(
+  function(data) {
     data.Volumes.forEach(function(volume) {
       var client = findClientTag(volume);
       if (!client) {
@@ -78,5 +77,7 @@ ec2.describeVolumes(params, function(err, data) {
         );
       }
     });
+  }, function(err) {
+    console.log(err, err.stack);
   }
-});
+);
