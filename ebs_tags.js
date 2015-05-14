@@ -59,11 +59,9 @@ ec2.describeVolumes(params, function(err, data) {
   if (err) {
     console.log(err, err.stack);
   } else {
-    // console.dir(data, {depth: null});
     data.Volumes.forEach(function(volume) {
       var client = findClientTag(volume);
       if (!client) {
-        // assume only a single attachment
         getInstance(volume, function(err, instance) {
           if (err) {
             console.log(err, err.stack);
