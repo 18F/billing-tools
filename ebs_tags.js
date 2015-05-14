@@ -66,22 +66,16 @@ var getInstance = function(volume) {
   return promise;
 };
 
-getUntaggedVolumes().then(
-  function(volumes) {
-    volumes.forEach(function(volume) {
-      getInstance(volume).then(
-        function(instance) {
-          client = findClientTag(instance);
-          if (client) {
-            console.log(volume.VolumeId + ' should have client tag ' + client);
-          }
-        },
-        function(err) {
-          console.log(err, err.stack);
-        }
-      );
-    });
-  }, function(err) {
-    console.log(err, err.stack);
-  }
-);
+var findAssociatedClient = function(volume) {
+  return getInstance(volume).then(function(instance) {
+    client = findClientTag(instance);
+    if (client) {
+      console.log(volume.VolumeId + ' should have client tag ' + client);
+    }
+  });
+};
+
+getUntaggedVolumes().then(function(volumes) {
+  var promises = volumes.map(findAssociatedClient);
+  return Promise.all(promises);
+}).catch(console.error);
