@@ -23,6 +23,32 @@ var findClientTag = function(resource) {
   return undefined;
 };
 
+var getUntaggedVolumes = function() {
+  // http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/EC2.html#describeVolumes-property
+  var params = {
+    Filters: [
+      // this should work but doesn't
+      // {
+      //   Name: 'tag:client',
+      //   Values: [
+      //     'not tagged'
+      //   ]
+      // }
+      {
+        Name: 'attachment.status',
+        Values: [
+          'attached'
+        ]
+      }
+    ]
+  };
+  return getVolumes(params).then(function(data) {
+    return data.Volumes.filter(function(volume) {
+      return !findClientTag(volume);
+    });
+  });
+};
+
 var getInstance = function(volume) {
   // assume only a single attachment
   var attachment = volume.Attachments[0];
@@ -40,42 +66,20 @@ var getInstance = function(volume) {
   return promise;
 };
 
-
-// http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/EC2.html#describeVolumes-property
-var params = {
-  Filters: [
-    // this should work but doesn't
-    // {
-    //   Name: 'tag:client',
-    //   Values: [
-    //     'not tagged'
-    //   ]
-    // }
-    {
-      Name: 'attachment.status',
-      Values: [
-        'attached'
-      ]
-    }
-  ]
-};
-getVolumes(params).then(
-  function(data) {
-    data.Volumes.forEach(function(volume) {
-      var client = findClientTag(volume);
-      if (!client) {
-        getInstance(volume).then(
-          function(instance) {
-            client = findClientTag(instance);
-            if (client) {
-              console.log(volume.VolumeId + ' should have client tag ' + client);
-            }
-          },
-          function(err) {
-            console.log(err, err.stack);
+getUntaggedVolumes().then(
+  function(volumes) {
+    volumes.forEach(function(volume) {
+      getInstance(volume).then(
+        function(instance) {
+          client = findClientTag(instance);
+          if (client) {
+            console.log(volume.VolumeId + ' should have client tag ' + client);
           }
-        );
-      }
+        },
+        function(err) {
+          console.log(err, err.stack);
+        }
+      );
     });
   }, function(err) {
     console.log(err, err.stack);
